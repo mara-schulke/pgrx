@@ -14,7 +14,7 @@ use std::io::{Read, Write};
 use std::panic::catch_unwind;
 use std::process::Command;
 
-::pgrx::pg_module_magic!();
+pgrx::pg_module_magic!(name, version);
 
 #[pg_extern]
 fn panic(s: &str) -> bool {
@@ -114,9 +114,9 @@ fn random_abort() {
 }
 
 #[pg_guard]
-pub unsafe extern "C" fn _PG_init() {
+pub unsafe extern "C-unwind" fn _PG_init() {
     #[pg_guard]
-    extern "C" fn random_abort_callback(
+    extern "C-unwind" fn random_abort_callback(
         event: pg_sys::XactEvent::Type,
         _arg: *mut std::os::raw::c_void,
     ) {

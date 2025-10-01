@@ -10,8 +10,8 @@
 use pgrx::prelude::*;
 
 #[pg_guard]
-#[no_mangle]
-pub extern "C" fn bgworker(arg: pg_sys::Datum) {
+#[unsafe(no_mangle)]
+pub extern "C-unwind" fn bgworker(arg: pg_sys::Datum) {
     use pgrx::bgworkers::*;
     use std::time::Duration;
     BackgroundWorker::attach_signal_handlers(SignalWakeFlags::SIGHUP | SignalWakeFlags::SIGTERM);
@@ -41,9 +41,9 @@ pub extern "C" fn bgworker(arg: pg_sys::Datum) {
 }
 
 #[pg_guard]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Here we test that `BackgroundWorker::transaction` can return data from the closure
-pub extern "C" fn bgworker_return_value(arg: pg_sys::Datum) {
+pub extern "C-unwind" fn bgworker_return_value(arg: pg_sys::Datum) {
     use pgrx::bgworkers::*;
     use std::time::Duration;
     BackgroundWorker::attach_signal_handlers(SignalWakeFlags::SIGHUP | SignalWakeFlags::SIGTERM);
@@ -75,9 +75,9 @@ pub extern "C" fn bgworker_return_value(arg: pg_sys::Datum) {
 }
 
 #[pg_guard]
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Simple background worker that waits to be terminated; used to test behaviour in case of worker slots exhaustion
-pub extern "C" fn bgworker_sleep() {
+pub extern "C-unwind" fn bgworker_sleep() {
     use pgrx::bgworkers::*;
     BackgroundWorker::attach_signal_handlers(SignalWakeFlags::SIGHUP | SignalWakeFlags::SIGTERM);
     while BackgroundWorker::wait_latch(None) {}

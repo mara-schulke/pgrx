@@ -129,18 +129,15 @@ impl Upgrade {
         let target_version = match self.to {
             Some(ref ver) => Some(ver.clone()),
             None => {
-                let dependency = cargo_edit::get_latest_dependency(
-                    dep_name,
-                    self.include_prereleases,
-                    None,
-                    index,
-                )
-                .map_err(|e| {
-                    eyre!(
-                        "Unable to fetch the latest version \
-                        for crate {dep_name} due to {e}"
-                    )
+                let krate = index.krate(dep_name).map_err(|e| {
+                    eyre!("The crate `{dep_name}` could not be found in registry index due {e}.")
                 })?;
+                let versions = krate.as_ref().map(|k| k.versions.as_slice()).unwrap_or_default();
+                let dependency =
+                    cargo_edit::find_latest_version(versions, self.include_prereleases, None)
+                        .ok_or_else(|| {
+                            eyre!("Unable to fetch the latest version for crate {dep_name}.")
+                        })?;
 
                 dependency.version().map(|s| s.to_string())
             }
@@ -227,14 +224,14 @@ impl Upgrade {
                 if let Some((key, dep)) = dep_table.get_key_value_mut(dep_name) {
                     self.update_dep(path, key, dep)?;
                     // Workaround since update_toml() doesn't preserve comments
-                    dep_table.key_decor_mut(dep_name).map(|dec| {
+                    if let Some(dec) = dep_table.key_decor_mut(dep_name) {
                         if let Some(prefix) = decor.as_ref().and_then(|val| val.prefix().cloned()) {
                             dec.set_prefix(prefix)
                         }
                         if let Some(suffix) = decor.as_ref().and_then(|val| val.suffix().cloned()) {
                             dec.set_suffix(suffix)
                         }
-                    });
+                    }
                 } else {
                     debug!(
                         "Manifest does not contain a dependency entry for \

@@ -79,8 +79,7 @@ where
         // Ptr<Datum> derefs to Datum which to Ptr
         PassBy::Ref => unsafe {
             let datum = ptr.read();
-            let ptr = ptr::NonNull::new(datum.sans_lifetime().cast_mut_ptr());
-            ptr
+            ptr::NonNull::new(datum.sans_lifetime().cast_mut_ptr())
         },
     }
 }
@@ -96,7 +95,18 @@ macro_rules! impl_borrow_fixed_len {
                 };
 
                 unsafe fn point_from(ptr: ptr::NonNull<u8>) -> ptr::NonNull<Self> {
-                    ptr.cast()
+                    #[cfg(target_endian = "big")]
+                    unsafe {
+                        if mem::size_of::<Self>() <= mem::size_of::<Datum>() {
+                            ptr.add(mem::size_of::<Datum>() - mem::size_of::<Self>()).cast()
+                        } else {
+                            ptr.cast()
+                        }
+                    }
+                    #[cfg(target_endian = "little")]
+                    {
+                        ptr.cast()
+                    }
                 }
             }
         )*

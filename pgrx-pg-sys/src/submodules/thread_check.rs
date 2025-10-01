@@ -26,7 +26,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 static ACTIVE_THREAD: AtomicUsize = AtomicUsize::new(0);
 #[track_caller]
-pub(crate) fn check_active_thread() {
+pub fn check_active_thread() {
     let current_thread = nonzero_thread_id();
     // Relaxed is sufficient as we're only interested in the effects on a single
     // atomic variable, and don't need synchronization beyond that.
@@ -144,8 +144,7 @@ fn nonzero_thread_id() -> NonZeroUsize {
         static BYTE: u8 = const { 0 };
     }
     BYTE.with(|p: &u8| {
-        // Note: Avoid triggering the `unstable_name_collisions` lint.
-        let addr = sptr::Strict::addr(p as *const u8);
+        let addr = (p as *const u8).addr();
         // SAFETY: `&u8` is always nonnull, so its address is always nonzero.
         unsafe { NonZeroUsize::new_unchecked(addr) }
     })
